@@ -1,0 +1,4 @@
+# Ensure binary files like .lib and .dll are treated as binary files
+*.lib binary
+*.dll binary
+*.exe binary

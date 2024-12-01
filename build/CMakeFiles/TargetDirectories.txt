@@ -1,0 +1,3 @@
+D:/Projects/PixelStreamingClient/build/CMakeFiles/PixelStreamingClient.dir
+D:/Projects/PixelStreamingClient/build/CMakeFiles/ALL_BUILD.dir
+D:/Projects/PixelStreamingClient/build/CMakeFiles/ZERO_CHECK.dir

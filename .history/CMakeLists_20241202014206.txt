@@ -1,0 +1,44 @@
+# Project name and version
+cmake_minimum_required(VERSION 3.14)
+project(PixelStreamingClient)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+
+# Set compiler warning and optimization options
+if (MSVC)
+    add_compile_options(/W4) # Enable high warning level and treat warnings as errors for MSVC
+else ()
+    add_compile_options(-Wall -Wextra -pedantic -Werror) # Enable warnings for GCC/Clang
+endif ()
+
+# Include directories for header files
+include_directories(
+    ${CMAKE_SOURCE_DIR}/third_party/WebRTC/5414/Include                 # WebRTC include directory
+    ${CMAKE_SOURCE_DIR}/third_party/WebRTC/5414/Include/third_party/abseil-cpp # Abseil-Cpp include directory
+    ${CMAKE_SOURCE_DIR}/third_party/WebRTC/CompatInclude               # WebRTC compatibility includes
+    ${CMAKE_SOURCE_DIR}/third_party/libWebSockets/include/Win64/VS2015 # libWebSockets include directory
+    ${CMAKE_SOURCE_DIR}/third_party/OpenSSL/1.1.1t/include/Win64/VS2015 # OpenSSL include directory
+    ${CMAKE_SOURCE_DIR}/third_party/jsoncpp/include                    # JsonCpp include directory
+)
+
+# Add library directories for static and dynamic libraries
+link_directories(
+    ${CMAKE_SOURCE_DIR}/third_party/WebRTC/5414/Lib/Win64/Release      # WebRTC library directory
+    ${CMAKE_SOURCE_DIR}/third_party/libWebSockets/lib/Win64/VS2015/Release # libWebSockets library directory
+    ${CMAKE_SOURCE_DIR}/third_party/OpenSSL/1.1.1t/lib/Win64/VS2015/Release # OpenSSL library directory
+    ${CMAKE_SOURCE_DIR}/third_party/jsoncpp/lib                        # JsonCpp library directory
+)
+
+# Define the executable file
+add_executable(PixelStreamingClient src/main.cpp)
+
+# Link necessary libraries
+target_link_libraries(PixelStreamingClient
+    webrtc.lib               # WebRTC library
+    websockets_static.lib    # libWebSockets library
+    libssl.lib               # OpenSSL SSL library
+    libcrypto.lib            # OpenSSL Crypto library
+    ws2_32                   # Windows Sockets library
+    jsoncpp.lib              # JsonCpp library
+)

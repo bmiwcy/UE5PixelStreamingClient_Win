@@ -1,0 +1,57 @@
+cmake_minimum_required(VERSION 3.15)
+project(PixelStreamingClient)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# WebRTC paths
+set(WEBRTC_PATH "C:/webrtc/src")
+set(WEBRTC_BUILD_PATH "${WEBRTC_PATH}/out/Default")
+
+# Add compile definitions
+add_definitions(
+    -DWEBRTC_WIN=1
+    -DNOMINMAX
+    -DWIN32_LEAN_AND_MEAN
+    -DWINVER=0x0A00
+    -D_WIN32_WINNT=0x0A00
+    -DWEBRTC_ENABLE_PROTOBUF=0
+    -DWEBRTC_LIBRARY_IMPL
+    -DWEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
+)
+
+# Add compiler options
+if(MSVC)
+    add_compile_options(
+        /wd4068  # Ignore unknown pragma warning
+        /wd3431  # Ignore incomplete type warning
+        /MP      # Enable multi-processor compilation
+    )
+endif()
+
+# Include directories
+include_directories(
+    ${WEBRTC_PATH}
+    ${WEBRTC_PATH}/third_party/abseil-cpp
+    ${WEBRTC_PATH}/third_party/libyuv/include
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+# Add source files
+set(SOURCE_FILES
+    src/main.cpp
+    src/pixel_streaming_client.cpp
+    src/video_renderer.cpp
+)
+
+# Create executable
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+
+# Link WebRTC libraries
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${WEBRTC_BUILD_PATH}/obj/webrtc.lib
+    ws2_32.lib
+    winmm.lib
+    secur32.lib
+    iphlpapi.lib
+)

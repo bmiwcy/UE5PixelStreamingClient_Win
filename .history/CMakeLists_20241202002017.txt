@@ -1,0 +1,23 @@
+# 项目名称和版本
+cmake_minimum_required(VERSION 3.14)
+project(PixelStreamingClient)
+
+# 设置 C++ 标准
+set(CMAKE_CXX_STANDARD 17)
+
+# 添加头文件路径
+include_directories(
+    ${CMAKE_SOURCE_DIR}/third_party/WebRTC/5414/Include
+    ${CMAKE_SOURCE_DIR}/third_party/WebRTC/CompatInclude
+)
+
+# 添加静态库路径
+link_directories(${CMAKE_SOURCE_DIR}/third_party/WebRTC/5414/Lib)
+
+# 可执行文件
+add_executable(PixelStreamingClient src/main.cpp)
+
+# 链接 WebRTC 的库文件
+target_link_libraries(PixelStreamingClient
+    libwebrtc.lib  # 替换为实际的库文件名
+)

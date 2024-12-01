@@ -1,0 +1,10 @@
+^D:\PROJECTS\PIXELSTREAMINGCLIENT\BUILD\CMAKEFILES\DA676A7CD353F25E7144B1AA116B683F\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/Projects/PixelStreamingClient -BD:/Projects/PixelStreamingClient/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/Projects/PixelStreamingClient/build/PixelStreamingClient.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
