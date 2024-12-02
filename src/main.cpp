@@ -1,106 +1,80 @@
-#include <libwebsockets.h>
+#include "signaling_client.h"
+#include "webrtc_manager.h"
 #include <iostream>
-#include <cstring>
 
-// Define signaling server address
 #define SIGNALING_SERVER_ADDRESS "ws://192.168.0.165:80/signaling"
 
-// WebSocket callback function
-static int websocket_callback(struct lws* wsi, enum lws_callback_reasons reason,
-                              void* user, void* in, size_t len)
-{
-    switch (reason)
-    {
-    case LWS_CALLBACK_CLIENT_ESTABLISHED:
-        std::cout << "WebSocket connection established." << std::endl;
-        lws_callback_on_writable(wsi); // Request writeable event
-        break;
+int main() {
+    SignalingClient signalingClient;
+    WebRTCManager webrtcManager;
 
-    case LWS_CALLBACK_CLIENT_RECEIVE:
-        std::cout << "Received: " << std::string((const char*)in, len) << std::endl;
-        break;
+    try {
+        std::cout << "Attempting to initialize WebRTCManager..." << std::endl;
+        if (!webrtcManager.Initialize()) {
+            std::cerr << "Failed to initialize WebRTC." << std::endl;
+            return -1;
+        }
+        std::cout << "WebRTCManager initialized successfully." << std::endl;
 
-    case LWS_CALLBACK_CLIENT_WRITEABLE:
-    {
-        const char* message = "{\"type\": \"listStreamers\"}";
-        unsigned char buffer[LWS_PRE + 512];
-        std::memset(buffer, 0, sizeof(buffer));
-        std::memcpy(&buffer[LWS_PRE], message, std::strlen(message));
-        lws_write(wsi, &buffer[LWS_PRE], std::strlen(message), LWS_WRITE_TEXT);
-        std::cout << "Sent: " << message << std::endl;
-        break;
-    }
+        // 创建 PeerConnection
+        webrtcManager.CreatePeerConnection();
+        
+        // 设置 WebRTC 回调
+        webrtcManager.SetAnswerCallback([&signalingClient](const std::string& sdp) {
+            std::cout << "Generated answer, sending to signaling server" << std::endl;
+            signalingClient.SendAnswer(sdp);
+        });
 
-    case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-        std::cerr << "WebSocket connection error!" << std::endl;
-        break;
+        webrtcManager.SetIceCandidateCallback(
+            [&signalingClient](const std::string& candidate, 
+                              const std::string& sdpMid, 
+                              int sdpMLineIndex) {
+                std::cout << "Got ICE candidate, sending to signaling server" << std::endl;
+                signalingClient.SendIceCandidate(candidate, sdpMid, sdpMLineIndex);
+            });
 
-    case LWS_CALLBACK_CLIENT_CLOSED:
-        std::cout << "WebSocket connection closed." << std::endl;
-        break;
-
-    default:
-        break;
-    }
-
-    return 0;
-}
-
-int main()
-{
-    struct lws_context_creation_info context_info;
-    struct lws_client_connect_info connect_info;
-    struct lws_context* context;
-
-    // Initialize context info
-    std::memset(&context_info, 0, sizeof(context_info));
-    context_info.port = CONTEXT_PORT_NO_LISTEN;
-    context_info.protocols = nullptr;
-    context_info.gid = -1;
-    context_info.uid = -1;
-
-    // Define protocol list
-    static const struct lws_protocols protocols[] = {
-        { "example-protocol", websocket_callback, 0, 512 },
-        { nullptr, nullptr, 0, 0 }
-    };
-    context_info.protocols = protocols;
-
-    // Create the WebSocket context
-    context = lws_create_context(&context_info);
-    if (!context)
-    {
-        std::cerr << "Failed to create WebSocket context." << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Exception caught during initialization: " << e.what() << std::endl;
         return -1;
     }
 
-    // Initialize connect info
-    std::memset(&connect_info, 0, sizeof(connect_info));
-    connect_info.context = context;
-    connect_info.address = "192.168.0.165";
-    connect_info.port = 80;
-    connect_info.path = "/signaling";
-    connect_info.host = lws_canonical_hostname(context);
-    connect_info.origin = "origin";
-    connect_info.protocol = protocols[0].name;
+    std::cout << "Program is proceeding normally..." << std::endl;
 
-    // Connect to the signaling server
-    if (!lws_client_connect_via_info(&connect_info))
-    {
-        std::cerr << "Failed to connect to WebSocket server." << std::endl;
-        lws_context_destroy(context);
+    if (!signalingClient.Connect(SIGNALING_SERVER_ADDRESS)) {
+        std::cerr << "Failed to connect to signaling server." << std::endl;
         return -1;
     }
 
-    std::cout << "Connecting to signaling server at " << SIGNALING_SERVER_ADDRESS << std::endl;
+    std::cout << "Successfully connected to signaling server." << std::endl;
 
-    // Main loop for handling WebSocket events
-    for (int i = 0; i < 10; ++i)
-    {
-        lws_service(context, 1000); // Poll for events with a 1-second timeout
+    // 设置信令服务器回调
+    signalingClient.SetMessageCallback([](const std::string& message) {
+        std::cout << "Message received in callback: " << message << std::endl;
+    });
+
+    signalingClient.SetOfferCallback([&webrtcManager](const std::string& sdp) {
+        std::cout << "Received offer, handling in WebRTC..." << std::endl;
+        webrtcManager.HandleOffer(sdp);
+    });
+
+    signalingClient.SetIceCandidateCallback(
+        [&webrtcManager](const std::string& candidate, 
+                        const std::string& sdpMid, 
+                        int sdpMLineIndex) {
+            std::cout << "Received ICE candidate, handling in WebRTC..." << std::endl;
+            webrtcManager.HandleIceCandidate(candidate, sdpMid, sdpMLineIndex);
+        });
+
+    signalingClient.SendSignalingMessage("{\"type\": \"listStreamers\"}");
+    std::cout << "Sent 'listStreamers' request to signaling server." << std::endl;
+
+    // 改为无限循环来保持连接，监听信令消息并处理
+    while (true) {
+        signalingClient.PollEvents(1000);
     }
 
-    // Destroy the WebSocket context
-    lws_context_destroy(context);
+    signalingClient.Disconnect();
+    std::cout << "Disconnected from signaling server." << std::endl;
+
     return 0;
 }
